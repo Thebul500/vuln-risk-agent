@@ -9,6 +9,7 @@
   "author": "Samuel Berston",
   "license": "ISC",
   "dependencies": {
-    "@langchain/langgraph": "^0.2.22"
+    "@langchain/langgraph": "^0.2.22",
+    "@tavily/core": "^0.0.2"
   }
 }
