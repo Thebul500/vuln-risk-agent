@@ -1,0 +1,11 @@
+{
+  "name": "agent",
+  "version": "1.0.0",
+  "description": "LLM agent handling multiple responsibilities: threat modeling, SAST, Vuln research, and reporting",
+  "main": "agent.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Samuel Berston",
+  "license": "ISC"
+}
