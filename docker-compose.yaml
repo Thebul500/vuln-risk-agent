@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  multi-agent:
+    build: ./multi-agent
+    ports:
+      - "4000:4000"
+    depends_on:
+      - audit
+    environment:
+      - NVD_API_KEY=your_nvd_api_key
+      - TAVILY_API_KEY=your_tavily_api_key
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - multi-agent
+
+  audit:
+    build: ./audit
+    volumes:
+      - ./target-project:/app
+    environment:
+      - NODE_ENV=production
