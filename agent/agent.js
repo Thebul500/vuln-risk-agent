@@ -33,6 +33,8 @@ app.post('/analyze', async (req, res) => {
 
     const projectDirName = repoUrl.split('/').pop().replace('.git', '');
     console.log("projectDirName: ", projectDirName);  
+
+    // Update to run threat model and npm audit in parallel using Promise.all
     
     // Threat Modeling Service
     console.log("Starting threat modeling...");

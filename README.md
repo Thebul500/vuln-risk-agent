@@ -2,6 +2,8 @@
 
 A web-based tool that performs security analysis on GitHub repositories, providing threat modeling and vulnerability assessments with AI-powered risk evaluation.
 
+![Security Assessment Dashboard](Screenshot.png)
+
 ## Features
 
 - GitHub repository analysis
