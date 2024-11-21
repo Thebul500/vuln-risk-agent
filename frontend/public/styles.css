@@ -1,0 +1,213 @@
+:root {
+    --primary-color: #e0e0e0;
+    --accent-color: #3498db;
+    --danger-color: #e74c3c;
+    --success-color: #2ecc71;
+    --warning-color: #f1c40f;
+    --bg-dark: #0f1116;
+    --card-bg: #1a1e24;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-dark);
+    color: var(--primary-color);
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--bg-dark), #161a21);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+header h1 {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: rgba(224, 224, 224, 0.7); 
+    margin-top: 10px;
+    margin-bottom: 20px;
+    font-size: 1.1em;
+}
+
+.input-section {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+input {
+    flex: 1;
+    padding: 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: var(--card-bg);
+    color: var(--primary-color);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+button {
+    padding: 0.8rem 1.5rem;
+    background: linear-gradient(135deg, var(--accent-color), #2980b9);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+    background: linear-gradient(135deg, #2980b9, #2472a4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+.content-box {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(10px);
+}
+
+.content-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(52, 152, 219, 0));
+    z-index: 1;
+    pointer-events: none;
+}
+
+.vuln-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.vuln-card {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    backdrop-filter: blur(10px);
+}
+
+.vuln-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(52, 152, 219, 0));
+    z-index: 1;
+    pointer-events: none;
+}
+
+.vuln-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.risk-level {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    color: white;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.risk-high { 
+    background: linear-gradient(135deg, var(--danger-color), #c0392b);
+}
+
+.risk-medium { 
+    background: linear-gradient(135deg, var(--warning-color), #f39c12);
+}
+
+.risk-low { 
+    background: linear-gradient(135deg, var(--success-color), #27ae60);
+}
+
+.hidden {
+    display: none;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.1);
+    border-top: 5px solid var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 2rem auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+h2 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+#loading p {
+    text-align: center;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    margin-top: 1rem;
+}
+
+.vulnerabilities-section, .threat-model-section {
+    margin-bottom: 3rem;
+}
+
+.assessment-note {
+    color: #666;
+    font-size: 0.9rem;
+    font-style: italic;
+    margin: -0.5rem 0 1.2rem 0;
+    opacity: 0.8;
+    font-weight: 300;
+    letter-spacing: 0.02em;
+}

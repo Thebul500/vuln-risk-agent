@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Assessment Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Security Assessment Dashboard</h1>
+            <p class="subtitle">Enter a GitHub repository URL to analyze its security vulnerabilities and generate a threat model.</p>
+        </header>
+        
+        <div class="input-section">
+            <input type="text" id="githubUrl" placeholder="Enter GitHub Repository URL">
+            <button onclick="analyzeRepo()">Analyze</button>
+        </div>
+
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p>Analyzing repository...</p>
+        </div>
+
+        <div id="dashboard" class="hidden">
+            <div class="vulnerabilities-section">
+                <h2>Vulnerability Assessment</h2>
+                <p class="assessment-note">AI-analyzed contextual risks ofdependencies with high severity vulnerabilities</p>
+                <div id="vulnCards" class="vuln-grid"></div>
+            </div>
+
+            <div class="threat-model-section">
+                <h2>Threat Model</h2>
+                <div id="threatModel" class="content-box"></div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
