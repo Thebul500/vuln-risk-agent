@@ -44,10 +44,12 @@
             "Analyzing project metadata...",
             "LLM threat modeling analysis...",
             "Setting up project environment...",
+            "Installing dependencies...",
             "Performing NPM security audit...",
             "Researching vulnerabilities...",
+            "Enriching vulnerabilities with GitHub data...",
             "Generating security report...",
-            "Finalizing report...",
+            "Finalizing report..."
         ];
         
         let currentIndex = 0;
@@ -58,8 +60,8 @@
             currentIndex = (currentIndex + 1) % statusMessages.length;
         }
         
-        // Update status every 20 seconds
-        setInterval(updateStatus, 20000);
+        // Update status every 30 seconds
+        setInterval(updateStatus, 30000);
         // Initial status update
         updateStatus();
     </script>

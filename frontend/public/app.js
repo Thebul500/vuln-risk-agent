@@ -3,8 +3,16 @@ async function analyzeRepo() {
     const loading = document.getElementById('loading');
     const dashboard = document.getElementById('dashboard');
 
+    // Add GitHub URL validation regex
+    const githubRegex = /^https:\/\/github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\.git$/;
+    
     if (!githubUrl) {
         alert('Please enter a GitHub repository URL');
+        return;
+    }
+    
+    if (!githubRegex.test(githubUrl)) {
+        alert('Please enter a valid GitHub repository URL in the format: https://github.com/owner/repo.git');
         return;
     }
 
