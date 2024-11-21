@@ -7,59 +7,44 @@ const fetch = require('node-fetch');
 const app = express();
 app.use(express.json());
 
+// Services
+const threatModelingService = require('./services/threatModelingService');
+const npmAuditService = require('../services/npmAuditService');
+
 // Endpoint to trigger analysis
 app.post('/analyze', async (req, res) => {
   const repoUrl = req.body.repoUrl;
-//   const projectPath = '/app/target-project';
-//   console.log("projectPath: ", projectPath);
 
   // Clone the repository
   console.log(`Cloning repository ${repoUrl}...`);
-  exec(`git clone ${repoUrl}`, (err) => {
+  exec(`git clone ${repoUrl}`, async (err) => {
     if (err) return res.status(500).send('Repository cloning failed.');
 
     const projectDirName = repoUrl.split('/').pop().replace('.git', '');
     console.log("projectDirName: ", projectDirName);
 
-    // First run npm install with --force
-    console.log(`Starting npm install for ${projectDirName}...`);
-    exec(`cd ${projectDirName} && npm install --force`, (installErr, installStdout, installStderr) => {
-      if (installErr) {
-        console.error('npm install error:', installErr);
-        console.error('install stderr:', installStderr);
-        return res.status(500).send('npm install failed.');
-      }
+    // Threat Modeling
+    try {
+      const metadata = await threatModelingService.collectProjectMetadata(projectDirName);
+      console.log("metadata: ", metadata);
+    } catch (error) {
+      console.error("Error in threat modeling:", error);
+      res.status(500).send('Error in threat modeling');
+    }
 
-      // Then run npm audit separately
-      console.log(`Starting npm audit for ${projectDirName}...`);
-      exec(`cd ${projectDirName} && npm audit --json`, async (auditErr, stdout, stderr) => {
-        let auditResults;
-        try {
-          // Even if audit has high severity issues, it will return JSON
-          auditResults = JSON.parse(stdout);
-          console.log("auditResults: ", auditResults);
-        } catch (parseErr) {
-          console.error('Failed to parse audit results:', parseErr);
-          console.log('Raw stdout:', stdout);
-          return res.status(500).send('Failed to parse audit results.');
-        }
+    // NPM Audit
+    try {
+      const auditResults = await npmAuditService.performAudit(projectDirName);
+      console.log("auditResults: ", auditResults);
+    } catch (error) {
+      console.error("Error in NPM audit:", error);
+      res.status(500).send('Error in NPM audit');
+    }
+    
+    // Vulnerability Research
 
-        // Write audit results to a file
-        console.log(`Writing audit results to ${projectDirName}/npm-audit-results.json...`);
-        try {
-          await fs.promises.writeFile(
-            `${projectDirName}/npm-audit-results.json`,
-            JSON.stringify(auditResults, null, 2)
-          );
-          console.log("auditResults written to file");
-        } catch (writeErr) {
-          console.error('Failed to write audit results:', writeErr);
-          return res.status(500).send('Failed to save audit results.');
-        }
-
-        res.json(auditResults)
-      });
-    });
+    // Reporting and Visualization
+    
   });
 });
 
