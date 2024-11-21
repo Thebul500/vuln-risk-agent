@@ -1,13 +1,10 @@
-version: '3.8'
 services:
-  multi-agent:
+  agent:
     build: ./agent
     ports:
       - "4000:4000"
-    depends_on:
-      - audit
     env_file:
-      - .env
+      - ./agent/.env
 
   frontend:
     build: ./frontend
@@ -15,10 +12,3 @@ services:
       - "3000:3000"
     depends_on:
       - agent
-
-  audit:
-    build: ./audit
-    volumes:
-      - ./target-project:/app
-    environment:
-      - NODE_ENV=production
