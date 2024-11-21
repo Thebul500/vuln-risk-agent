@@ -11,6 +11,7 @@ app.use(express.json());
 const threatModelingService = require('./services/threatModelingService');
 const npmAuditService = require('./services/npmAuditService');
 const vulnResearchService = require('./services/vulnResearchService');
+const reportingService = require('./services/reportingService');
 
 // Endpoint to trigger analysis
 app.post('/analyze', async (req, res) => {
@@ -63,7 +64,15 @@ app.post('/analyze', async (req, res) => {
       res.status(500).send('Error in vulnerability research');
     }
 
-    // Reporting and Visualization
+    // Reporting service
+    console.log("Starting reporting service...");
+    try {
+      await reportingService.generateReport(projectDirName);
+      console.log("Finished reporting service.");
+    } catch (error) {
+      console.error("Error in reporting service:", error);
+      res.status(500).send('Error in reporting service');
+    }
 
   });
 });
