@@ -23,10 +23,10 @@ const reportingService = require('./services/reportingService');
 
 // Endpoint to trigger analysis
 app.post('/analyze', async (req, res) => {
-
-  const repoUrl = req.body.githubUrl;
+  console.log("Received request to analyze repository");
 
   // Validate GitHub URL
+  const repoUrl = req.body.githubUrl;
   const githubUrlPattern = /^https?:\/\/github\.com\/[\w-]+\/[\w.-]+(?:\.git)?$/;
   if (!githubUrlPattern.test(repoUrl)) {
     return res.status(400).send('Invalid GitHub repository URL. Please provide a valid GitHub repository URL.');
@@ -95,6 +95,14 @@ app.post('/analyze', async (req, res) => {
     } catch (error) {
       console.error("Error reading assessment files:", error);
       res.status(500).send('Error reading assessment files');
+    } finally {
+      // Clean up the cloned repository
+      try {
+        fs.rmSync(projectDirName, { recursive: true, force: true });
+        console.log(`Cleaned up cloned repository: ${projectDirName}`);
+      } catch (cleanupError) {
+        console.error("Error cleaning up cloned repository:", cleanupError);
+      }
     }
   });
 });
