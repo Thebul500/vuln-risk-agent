@@ -40,26 +40,26 @@ app.post('/analyze', async (req, res) => {
     const projectDirName = repoUrl.split('/').pop().replace('.git', '');
     console.log("projectDirName: ", projectDirName);  
 
-    // Update to run threat model and npm audit in parallel using Promise.all
-    
-    // Threat Modeling Service
-    console.log("Starting threat modeling...");
+    // Run threat model and npm audit in parallel
+    console.log("Starting threat modeling and NPM audit in parallel...");
     try {
-      const threatModel = await threatModelingService.runThreatModeling(projectDirName);
-      console.log("Threat model generated and saved successfully");
+      await Promise.all([
+        threatModelingService.runThreatModeling(projectDirName)
+          .then(() => console.log("Threat model generated and saved successfully"))
+          .catch(error => {
+            console.error("Error in threat modeling:", error);
+            throw new Error('Threat modeling failed');
+          }),
+          
+        npmAuditService.runAudit(projectDirName)
+          .then(() => console.log("Finished npm audit."))
+          .catch(error => {
+            console.error("Error in NPM audit:", error);
+            throw new Error('NPM audit failed');
+          })
+      ]);
     } catch (error) {
-      console.error("Error in threat modeling:", error);
-      res.status(500).send('Error in threat modeling');
-    }
-
-    // NPM Audit Service
-    console.log("Starting NPM audit...");
-    try {
-      await npmAuditService.runAudit(projectDirName);
-      console.log("Finished npm audit.");
-    } catch (error) {
-      console.error("Error in NPM audit:", error);
-      res.status(500).send('Error in NPM audit');
+      return res.status(500).send(`Parallel execution failed: ${error.message}`);
     }
     
     // Vulnerability Research
