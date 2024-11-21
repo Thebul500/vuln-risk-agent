@@ -100,31 +100,26 @@ Directory Structure:
 ${JSON.stringify(metadata.structure, null, 2)}
 
 Please analyze potential security threats and vulnerabilities, focusing on:
-1. Common web vulnerabilities applicable to this stack
+1. How common web vulnerabilities which are applicable to this project
 2. Application-specific attack vectors
 3. Required conditions for exploitation
 4. Severity levels
 5. Recommended mitigations
 
-The threat model should information which will help a security engineer to assess the risk of vulnerabilities in dependencies in the target project, such as:
+The threat model must include information which will help a security engineer to assess the risk of vulnerabilities in dependencies in the target project, such as:
 - a summary of the project's purpose and architecture
-- a list of the project's dependencies and their purpose
+- a list of all the project's dependencies (including devDependencies) and their purpose in the project
 - a list of the project's exposed ports
 - a list of the project's security-related files
-- any other information which would help a security engineer to assess the risk of vulnerabilities in the target project`;
+- any other information which would help a security engineer to assess the risk of vulnerabilities in the target project;s dependencies`;
 
         try {
             const response = await this.openai.chat.completions.create({
-                model: "gpt-4o-mini",
+                model: "o1-preview",
                 messages: [{
-                    role: "system",
-                    content: "You are a security expert specialized in threat modeling."
-                }, {
-                    role: "user",
-                    content: prompt
-                }],
-                temperature: 0.7,
-                max_tokens: 2000
+                    "role": "user",
+                    "content": prompt
+                }]
             });
 
             return response.choices[0].message.content;
