@@ -21,7 +21,7 @@
 
         <div id="loading" class="hidden">
             <div class="spinner"></div>
-            <p>Analyzing repository...</p>
+            <p id="analysisStatus">Initializing analysis...</p>
         </div>
 
         <div id="dashboard" class="hidden">
@@ -38,5 +38,30 @@
         </div>
     </div>
     <script src="app.js"></script>
+    <script>
+        const statusMessages = [
+            "Cloning repository...",
+            "Analyzing project metadata...",
+            "LLM threat modeling analysis...",
+            "Setting up project environment...",
+            "Performing NPM security audit...",
+            "Researching vulnerabilities...",
+            "Generating security report...",
+            "Finalizing report...",
+        ];
+        
+        let currentIndex = 0;
+        
+        function updateStatus() {
+            const statusElement = document.getElementById('analysisStatus');
+            statusElement.textContent = statusMessages[currentIndex];
+            currentIndex = (currentIndex + 1) % statusMessages.length;
+        }
+        
+        // Update status every 20 seconds
+        setInterval(updateStatus, 20000);
+        // Initial status update
+        updateStatus();
+    </script>
 </body>
 </html>
