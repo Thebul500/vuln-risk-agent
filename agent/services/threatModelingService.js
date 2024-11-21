@@ -147,6 +147,12 @@ ${JSON.stringify(metadata.packageJson, null, 2)}
 Directory Structure:
 ${JSON.stringify(metadata.structure, null, 2)}
 
+Security-related files:
+${JSON.stringify(metadata.securityConfig, null, 2)}
+
+Exposed ports:
+${metadata.exposedPorts.join(', ')}
+
 Please analyze potential security threats and vulnerabilities, focusing on:
 1. How common web vulnerabilities which are applicable to this project
 2. Application-specific attack vectors
