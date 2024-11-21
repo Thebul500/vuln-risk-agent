@@ -1,5 +1,6 @@
 const axios = require('axios');
 const fs = require('fs').promises;
+const { Octokit } = require('@octokit/core');
 
 class VulnResearchService {
     constructor() {
@@ -79,6 +80,7 @@ class VulnResearchService {
 
                 // Only fetch advisory data if advisory URL exists
                 if (vuln.advisory) {
+                    console.log("Fetching GitHub advisory data for ", vuln.advisory);
                     advisoryData = await this.fetchGitHubAdvisory(vuln.advisory);
                 }
                 
@@ -116,18 +118,24 @@ class VulnResearchService {
         const githubToken = process.env.GITHUB_TOKEN;
 
         try {
-            const response = await axios.get(advisoryUrl, {
+            // Extract GHSA ID from the URL
+            const ghsaId = advisoryUrl.split('/').pop();
+
+            // Fetch the advisory data with Octokit client
+            const octokit = new Octokit({ auth: githubToken });
+            const response = await octokit.request(`GET /advisories/${ghsaId}`, {
                 headers: {
-                    'Authorization': `token ${githubToken}`,
-                    'Accept': 'application/vnd.github.v3+json'
+                  'X-GitHub-Api-Version': '2022-11-28'
                 }
             });
+            console.log("response.data: ", response.data);
                 
             return {
                 description: response.data.description,
                 attackVectors: response.data.details,
                 impact: response.data.severity,
                 // Add other relevant fields from the GitHub Advisory API
+                ...response.data
             };
         } catch (error) {
             console.error('Error fetching GitHub advisory:', error);
