@@ -23,31 +23,37 @@ app.post('/analyze', async (req, res) => {
     const projectDirName = repoUrl.split('/').pop().replace('.git', '');
     console.log("projectDirName: ", projectDirName);
 
-    // Threat Modeling
+    // Threat Modeling Service
     console.log("Starting threat modeling...");
     try {
       const metadata = await threatModelingService.collectProjectMetadata(projectDirName);
       console.log("metadata: ", metadata);
 
+      console.log("Generating threat model...");
       const threatModel = await threatModelingService.generateThreatModel(metadata);
       console.log("threatModel: ", threatModel);
+
+      console.log("Saving threat model to file...");
+      await threatModelingService.saveThreatModel(projectDirName, threatModel);
+      console.log("Threat model saved to file");
 
     } catch (error) {
       console.error("Error in threat modeling:", error);
       res.status(500).send('Error in threat modeling');
     }
 
-    // NPM Audit
-    // console.log("Starting NPM audit...");
-    // try {
-    //   const auditResults = await npmAuditService.performAudit(projectDirName);
-    //   console.log("auditResults: ", auditResults);
-    // } catch (error) {
-    //   console.error("Error in NPM audit:", error);
-    //   res.status(500).send('Error in NPM audit');
-    // }
+    // NPM Audit Service
+    console.log("Starting NPM audit...");
+    try {
+      await npmAuditService.runAudit(projectDirName);
+      console.log("Finished npm audit.");
+    } catch (error) {
+      console.error("Error in NPM audit:", error);
+      res.status(500).send('Error in NPM audit');
+    }
     
     // Vulnerability Research
+    
 
     // Reporting and Visualization
 

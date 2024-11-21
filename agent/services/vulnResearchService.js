@@ -20,49 +20,49 @@ function extractHighSeverityVulns(auditResults) {
 }
 
 async function researchVulnerabilities(vulns) {
-const researchResults = [];
+    const researchResults = [];
 
-for (const vuln of vulns) {
-    try {
-    // Fetch advisory data from GitHub
-    const advisoryData = await fetchGitHubAdvisory(vuln.advisory);
-    
-    const researchResult = {
-        ...vuln,
-        research: {
-            description: advisoryData.description,
-            attackVectors: advisoryData.attackVectors,
-            impact: advisoryData.impact,
-            exploitabilityAssessment: await assessExploitability(advisoryData, vuln)
+    for (const vuln of vulns) {
+        try {
+            // Fetch advisory data from GitHub
+            const advisoryData = await fetchGitHubAdvisory(vuln.advisory);
+            
+            const researchResult = {
+                ...vuln,
+                research: {
+                    description: advisoryData.description,
+                    attackVectors: advisoryData.attackVectors,
+                    impact: advisoryData.impact,
+                    exploitabilityAssessment: await assessExploitability(advisoryData, vuln)
+                }
+            };
+        
+            researchResults.push(researchResult);
+        } catch (error) {
+            console.error(`Error researching vulnerability for ${vuln.packageName}:`, error);
         }
-    };
-    
-        researchResults.push(researchResult);
-    } catch (error) {
-        console.error(`Error researching vulnerability for ${vuln.packageName}:`, error);
     }
-}
 
-return researchResults;
+    return researchResults;
 }
 
 async function fetchGitHubAdvisory(advisoryUrl) {
-// You'll need to implement GitHub API authentication
-const githubToken = process.env.GITHUB_TOKEN;
+    // You'll need to implement GitHub API authentication
+    const githubToken = process.env.GITHUB_TOKEN;
 
-try {
-    const response = await axios.get(advisoryUrl, {
-        headers: {
-            'Authorization': `token ${githubToken}`,
-            'Accept': 'application/vnd.github.v3+json'
-        }
+    try {
+        const response = await axios.get(advisoryUrl, {
+            headers: {
+                'Authorization': `token ${githubToken}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
         });
-        
+            
         return {
-        description: response.data.description,
-        attackVectors: response.data.details,
-        impact: response.data.severity,
-        // Add other relevant fields from the GitHub Advisory API
+            description: response.data.description,
+            attackVectors: response.data.details,
+            impact: response.data.severity,
+            // Add other relevant fields from the GitHub Advisory API
         };
     } catch (error) {
         console.error('Error fetching GitHub advisory:', error);

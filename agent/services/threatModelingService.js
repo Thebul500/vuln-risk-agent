@@ -82,7 +82,13 @@ class ThreatModelingService {
     }
 
     async generateThreatModel(metadata) {
-        const prompt = `Based on the following project metadata, create a comprehensive threat model:
+        const prompt = `
+Your task is to analyze the following project metadata and create a threat model which will serve as context for assessing the risk of vulnerabilities identifies by an npm audit scan.
+The threat model should offer context about the project which will be used by a security engineer to assess the impact of known vulnerabilities in the target project.
+In later stage in this workflow, the npm audit scan will run on the project and it will be enriched with GitHub advisory data.
+Then, the security engineer will assess the vulnerability data in the context of the threat model to determine the vulnerability's exploitability.
+
+Here is the project metada:
 
 README:
 ${metadata.readme}
@@ -98,11 +104,18 @@ Please analyze potential security threats and vulnerabilities, focusing on:
 2. Application-specific attack vectors
 3. Required conditions for exploitation
 4. Severity levels
-5. Recommended mitigations`;
+5. Recommended mitigations
+
+The threat model should information which will help a security engineer to assess the risk of vulnerabilities in dependencies in the target project, such as:
+- a summary of the project's purpose and architecture
+- a list of the project's dependencies and their purpose
+- a list of the project's exposed ports
+- a list of the project's security-related files
+- any other information which would help a security engineer to assess the risk of vulnerabilities in the target project`;
 
         try {
             const response = await this.openai.chat.completions.create({
-                model: "gpt-3.5-turbo",
+                model: "gpt-4o-mini",
                 messages: [{
                     role: "system",
                     content: "You are a security expert specialized in threat modeling."
@@ -118,6 +131,17 @@ Please analyze potential security threats and vulnerabilities, focusing on:
         } catch (error) {
             console.error('Error generating threat model:', error);
             throw error;
+        }
+    }
+
+    // Save the threat model to a file
+    async saveThreatModel(projectDirName, threatModel) {
+        try {   
+            await fs.writeFile(`${projectDirName}/threat-model.md`, threatModel);
+            console.log("Threat model saved to file");
+        } catch (error) {
+            console.error('Error saving threat model:', error);
+            throw new Error('Failed to save threat model');
         }
     }
 }

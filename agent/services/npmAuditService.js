@@ -5,12 +5,15 @@ class NpmAuditService {
   async runAudit(projectDirName) {
     try {
       // First run npm install with --force
+      console.log("Running npm install...");
       await this.runNpmInstall(projectDirName);
       
       // Then run npm audit
+      console.log("Running npm audit...");
       const auditResults = await this.performAudit(projectDirName);
       
       // Save audit results
+      console.log("Saving audit results...");
       await this.saveAuditResults(projectDirName, auditResults);
       
       return auditResults;
