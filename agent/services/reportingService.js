@@ -68,20 +68,22 @@ ${JSON.stringify(highSeverityVulns, null, 2)}
 NPM Audit Additional Context:
 ${JSON.stringify(npmAudit.vulnerabilities, null, 2)}
 
-Please provide your assessment in the following format for each vulnerability:
-
-{
-    "packageName": "package-name",
-    "vulnerability": {
-        "summary": "Brief description",
-        "isExploitable": true/false,
-        "exploitabilityReasoning": "Detailed explanation",
-        "requiredConditions": ["condition1", "condition2"],
-        "contextualRiskLevel": "high/medium/low",
-        "recommendedMitigations": ["mitigation1", "mitigation2"]
+Provide your assessment as a JSON array where each item follows this structure:
+[
+    {
+        "packageName": "package-name",
+        "vulnerability": {
+            "summary": "Brief description",
+            "isExploitable": true/false,
+            "exploitabilityReasoning": "Detailed explanation",
+            "requiredConditions": ["condition1", "condition2"],
+            "contextualRiskLevel": "high/medium/low",
+            "recommendedMitigations": ["mitigation1", "mitigation2"]
+        }
     }
-}`;
+]
 
+Return only the JSON array with no additional text or formatting.`;
         try {
             console.log("Assessing exploitability with OpenAI...");
             const response = await this.openai.chat.completions.create({
