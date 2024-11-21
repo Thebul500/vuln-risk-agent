@@ -87,7 +87,7 @@ Return only the JSON array with no additional text or formatting.`;
         try {
             console.log("Assessing exploitability with OpenAI...");
             const response = await this.openai.chat.completions.create({
-                model: "o1-preview",
+                model: "o1-mini",
                 messages: [{
                     "role": "user",
                     "content": prompt
@@ -104,9 +104,13 @@ Return only the JSON array with no additional text or formatting.`;
     async saveReport(projectDirName, report) {
         try {
             console.log("Saving report...");
+            if (typeof report === 'string') {
+                // Remove markdown code block markers if present
+                cleanReport = report.replace(/^```json\n|\n```$/g, '');
+            }
             await fs.writeFile(
                 path.join(projectDirName, 'security-assessment-report.json'),
-                typeof report === 'string' ? report : JSON.stringify(report, null, 2)
+                typeof report === 'string' ? cleanReport : JSON.stringify(cleanReport, null, 2)
             );
             console.log("Security assessment report saved to file");
         } catch (error) {
