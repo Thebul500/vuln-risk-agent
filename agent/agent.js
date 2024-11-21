@@ -26,6 +26,12 @@ app.post('/analyze', async (req, res) => {
 
   const repoUrl = req.body.githubUrl;
 
+  // Validate GitHub URL
+  const githubUrlPattern = /^https?:\/\/github\.com\/[\w-]+\/[\w.-]+(?:\.git)?$/;
+  if (!githubUrlPattern.test(repoUrl)) {
+    return res.status(400).send('Invalid GitHub repository URL. Please provide a valid GitHub repository URL.');
+  }
+
   // Clone the repository
   console.log(`Cloning repository ${repoUrl}...`);
   exec(`git clone ${repoUrl}`, async (err) => {
