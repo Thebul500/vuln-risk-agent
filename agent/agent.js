@@ -9,7 +9,7 @@ app.use(express.json());
 
 // Services
 const threatModelingService = require('./services/threatModelingService');
-const npmAuditService = require('../services/npmAuditService');
+const npmAuditService = require('./services/npmAuditService');
 
 // Endpoint to trigger analysis
 app.post('/analyze', async (req, res) => {
@@ -24,27 +24,33 @@ app.post('/analyze', async (req, res) => {
     console.log("projectDirName: ", projectDirName);
 
     // Threat Modeling
+    console.log("Starting threat modeling...");
     try {
       const metadata = await threatModelingService.collectProjectMetadata(projectDirName);
       console.log("metadata: ", metadata);
+
+      const threatModel = await threatModelingService.generateThreatModel(metadata);
+      console.log("threatModel: ", threatModel);
+
     } catch (error) {
       console.error("Error in threat modeling:", error);
       res.status(500).send('Error in threat modeling');
     }
 
     // NPM Audit
-    try {
-      const auditResults = await npmAuditService.performAudit(projectDirName);
-      console.log("auditResults: ", auditResults);
-    } catch (error) {
-      console.error("Error in NPM audit:", error);
-      res.status(500).send('Error in NPM audit');
-    }
+    // console.log("Starting NPM audit...");
+    // try {
+    //   const auditResults = await npmAuditService.performAudit(projectDirName);
+    //   console.log("auditResults: ", auditResults);
+    // } catch (error) {
+    //   console.error("Error in NPM audit:", error);
+    //   res.status(500).send('Error in NPM audit');
+    // }
     
     // Vulnerability Research
 
     // Reporting and Visualization
-    
+
   });
 });
 
