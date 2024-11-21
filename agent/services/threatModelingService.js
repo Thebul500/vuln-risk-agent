@@ -33,24 +33,16 @@ class ThreatModelingService {
             metadata.structure = await this.getDirectoryStructure(projectPath);
             console.log("directory structure: ", metadata.structure);
 
-            // Check for security-related files
-            console.log("Checking for security-related files...");
-            const securityFiles = ['dockerfile', 'docker-compose.yml', '.env.example', '.npmrc', '.gitlab-ci.yml', '.github/workflows'];
-            metadata.securityConfig = await Promise.all(
-                securityFiles.map(async file => {
-                    const exists = await fs.access(path.join(projectPath, file))
-                        .then(() => true)
-                        .catch(() => false);
-                    return exists ? file : null;
-                })
-            ).then(files => files.filter(Boolean));
-            console.log("securityConfig: ", metadata.securityConfig);
+            // Get security-related files
+            console.log("Getting security-related files...");
+            metadata.securityConfig = await this.getSecurityRelatedFiles(projectPath);
+            console.log("security-related files: ", metadata.securityConfig);
 
             // Get exposed ports from package.json scripts
             console.log("Getting exposed ports from package.json scripts...");
             metadata.exposedPorts = Object.values(metadata.packageJson.scripts || {})
-            .join(' ')
-            .match(/port\s*=?\s*(\d+)/gi) || [];
+                .join(' ')
+                .match(/port\s*=?\s*(\d+)/gi) || [];
             console.log("exposedPorts: ", metadata.exposedPorts);
 
             console.log("Metadata collected successfully");
@@ -59,6 +51,62 @@ class ThreatModelingService {
             console.error('Error collecting metadata:', error);
             throw error;
         }
+    }
+
+    async getSecurityRelatedFiles(projectPath) {
+        // Check for security-related files
+        console.log("Checking for security-related files...");
+        const securityFiles = ['dockerfile', 'docker-compose.yml', '.env.example', '.npmrc', '.gitlab-ci.yml', '.github/workflows'];
+        const securityConfig = await Promise.all(
+            securityFiles.map(async file => {
+                const filePath = path.join(projectPath, file);
+                try {
+                    const exists = await fs.access(filePath).then(() => true);
+                    if (!exists) return null;
+
+                    const fileData = { name: file };
+
+                    // Analyze specific files
+                    switch (file.toLowerCase()) {
+                        case 'dockerfile':
+                            const dockerContent = await fs.readFile(filePath, 'utf8');
+                            fileData.baseImage = dockerContent.match(/^FROM\s+([^\n]+)/m)?.[1];
+                            fileData.exposedPorts = dockerContent.match(/EXPOSE\s+(\d+)/g)?.map(p => p.split(' ')[1]);
+                            break;
+
+                        case 'docker-compose.yml':
+                            const composeContent = await fs.readFile(filePath, 'utf8');
+                            fileData.services = composeContent.match(/^services:/m) ? true : false;
+                            fileData.volumes = composeContent.match(/volumes:/g)?.length || 0;
+                            break;
+
+                        case '.env.example':
+                            const envContent = await fs.readFile(filePath, 'utf8');
+                            fileData.sensitiveVars = envContent.match(/(?:PASSWORD|SECRET|KEY|TOKEN)/gi)?.length || 0;
+                            break;
+
+                        case '.npmrc':
+                            const npmrcContent = await fs.readFile(filePath, 'utf8');
+                            fileData.hasRegistry = npmrcContent.includes('registry=');
+                            fileData.hasToken = npmrcContent.includes('//registry.npmjs.org/:_authToken=');
+                            break;
+
+                        case '.gitlab-ci.yml':
+                        case '.github/workflows':
+                            const ciContent = await fs.readFile(filePath, 'utf8');
+                            fileData.hasTests = ciContent.match(/\b(test|jest|mocha|cypress)\b/i) !== null;
+                            fileData.hasSecurityScans = ciContent.match(/\b(snyk|sonar|dependency|security|audit)\b/i) !== null;
+                            break;
+                    }
+
+                    return fileData;
+                } catch {
+                    return null;
+                }
+            })
+        ).then(files => files.filter(Boolean));
+        console.log("securityConfig: ", securityConfig);
+        return securityConfig;
     }
 
     async getDirectoryStructure(dirPath, depth = 2) {
