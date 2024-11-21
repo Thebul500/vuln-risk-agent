@@ -104,13 +104,14 @@ Return only the JSON array with no additional text or formatting.`;
     async saveReport(projectDirName, report) {
         try {
             console.log("Saving report...");
+            let cleanReport = report;
             if (typeof report === 'string') {
                 // Remove markdown code block markers if present
                 cleanReport = report.replace(/^```json\n|\n```$/g, '');
             }
             await fs.writeFile(
                 path.join(projectDirName, 'security-assessment-report.json'),
-                typeof report === 'string' ? cleanReport : JSON.stringify(cleanReport, null, 2)
+                typeof report === 'string' ? cleanReport : JSON.stringify(report, null, 2)
             );
             console.log("Security assessment report saved to file");
         } catch (error) {
