@@ -10,19 +10,20 @@ app.use(express.json());
 // Services
 const threatModelingService = require('./services/threatModelingService');
 const npmAuditService = require('./services/npmAuditService');
+const vulnResearchService = require('./services/vulnResearchService');
 
 // Endpoint to trigger analysis
 app.post('/analyze', async (req, res) => {
   const repoUrl = req.body.repoUrl;
-
+  
   // Clone the repository
   console.log(`Cloning repository ${repoUrl}...`);
   exec(`git clone ${repoUrl}`, async (err) => {
     if (err) return res.status(500).send('Repository cloning failed.');
 
     const projectDirName = repoUrl.split('/').pop().replace('.git', '');
-    console.log("projectDirName: ", projectDirName);
-
+    console.log("projectDirName: ", projectDirName);  
+    
     // Threat Modeling Service
     console.log("Starting threat modeling...");
     try {
@@ -53,7 +54,14 @@ app.post('/analyze', async (req, res) => {
     }
     
     // Vulnerability Research
-    
+    console.log("Starting vulnerability research...");
+    try {
+      await vulnResearchService.runResearch(projectDirName);
+      console.log("Finished vulnerability research.");
+    } catch (error) {
+      console.error("Error in vulnerability research:", error);
+      res.status(500).send('Error in vulnerability research');
+    }
 
     // Reporting and Visualization
 
@@ -61,5 +69,5 @@ app.post('/analyze', async (req, res) => {
 });
 
 app.listen(4000, () => {
-  console.log('Multi-Agent System running on port 4000');
+  console.log('LLM agent running on port 4000');
 });
