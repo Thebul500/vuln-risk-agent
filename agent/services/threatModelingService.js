@@ -78,6 +78,7 @@ class ThreatModelingService {
         }
     }
 
+    // Get security-related files helper
     async getSecurityRelatedFiles(projectPath) {
         // Check for security-related files
         console.log("Checking for security-related files...");
@@ -134,6 +135,7 @@ class ThreatModelingService {
         return securityConfig;
     }
 
+    // Get directory structure helper
     async getDirectoryStructure(dirPath, depth = 2) {
         const items = await fs.readdir(dirPath);
         const structure = {};
@@ -154,6 +156,7 @@ class ThreatModelingService {
         return structure;
     }
 
+    // Generate threat model helper
     async generateThreatModel(metadata) {
         const prompt = `
 Your task is to analyze the following project metadata and create a threat model which will serve as context for assessing the risk of vulnerabilities identifies by an npm audit scan.
