@@ -6,9 +6,8 @@ services:
       - "4000:4000"
     depends_on:
       - audit
-    environment:
-      - TAVILY_API_KEY=your_tavily_api_key
-      - GITHUB_TOKEN=your_github_token # TODO: Add this to the .env file for GitHub advisory research
+    env_file:
+      - .env
 
   frontend:
     build: ./frontend
