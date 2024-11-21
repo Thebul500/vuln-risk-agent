@@ -7,6 +7,14 @@ const fetch = require('node-fetch');
 const app = express();
 app.use(express.json());
 
+// Add CORS middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:8080');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
 // Services
 const threatModelingService = require('./services/threatModelingService');
 const npmAuditService = require('./services/npmAuditService');
@@ -15,8 +23,9 @@ const reportingService = require('./services/reportingService');
 
 // Endpoint to trigger analysis
 app.post('/analyze', async (req, res) => {
-  const repoUrl = req.body.repoUrl;
-  
+
+  const repoUrl = req.body.githubUrl;
+
   // Clone the repository
   console.log(`Cloning repository ${repoUrl}...`);
   exec(`git clone ${repoUrl}`, async (err) => {
@@ -74,6 +83,20 @@ app.post('/analyze', async (req, res) => {
       res.status(500).send('Error in reporting service');
     }
 
+    // Return both the security assessment report and threat model
+    try {
+      const report = await fs.promises.readFile(`${projectDirName}/security-assessment-report.json`, 'utf8').catch(() => '{}');
+      const threatModel = await fs.promises.readFile(`${projectDirName}/threat-model.md`, 'utf8').catch(() => '{}');
+      
+      res.json({
+        vulnerabilities: JSON.parse(report),
+        threatModel: threatModel
+      });
+      return;
+    } catch (error) {
+      console.error("Error reading assessment files:", error);
+      res.status(500).send('Error reading assessment files');
+    }
   });
 });
 
