@@ -194,7 +194,7 @@ The threat model must include information which will help a security engineer to
 
         try {
             const response = await this.openai.chat.completions.create({
-                model: "o1-preview",
+                model: "o1-mini",
                 messages: [{
                     "role": "user",
                     "content": prompt
