@@ -9,6 +9,31 @@ class ThreatModelingService {
         });
     }
 
+    // Main method to run the threat modeling process
+    async runThreatModeling(projectPath) {
+        try {
+            console.log('Starting threat modeling process for:', projectPath);
+            
+            // Step 1: Collect project metadata
+            console.log('Collecting project metadata...');
+            const metadata = await this.collectProjectMetadata(projectPath);
+            
+            // Step 2: Generate threat model
+            console.log('Generating threat model...');
+            const threatModel = await this.generateThreatModel(metadata);
+            
+            // Step 3: Save threat model
+            console.log('Saving threat model...');
+            await this.saveThreatModel(projectPath, threatModel);
+            
+            console.log('Threat modeling process completed successfully');
+            return threatModel;
+        } catch (error) {
+            console.error('Error in threat modeling process:', error);
+            throw error;
+        }
+    }
+
     async collectProjectMetadata(projectPath) {
         console.log("collectProjectMetadata: ", projectPath);
         const metadata = {};

@@ -45,17 +45,8 @@ app.post('/analyze', async (req, res) => {
     // Threat Modeling Service
     console.log("Starting threat modeling...");
     try {
-      const metadata = await threatModelingService.collectProjectMetadata(projectDirName);
-      console.log("metadata: ", metadata);
-
-      console.log("Generating threat model...");
-      const threatModel = await threatModelingService.generateThreatModel(metadata);
-      console.log("threatModel: ", threatModel);
-
-      console.log("Saving threat model to file...");
-      await threatModelingService.saveThreatModel(projectDirName, threatModel);
-      console.log("Threat model saved to file");
-
+      const threatModel = await threatModelingService.runThreatModeling(projectDirName);
+      console.log("Threat model generated and saved successfully");
     } catch (error) {
       console.error("Error in threat modeling:", error);
       res.status(500).send('Error in threat modeling');
