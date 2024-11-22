@@ -31,14 +31,20 @@ The application follows a client-server architecture:
 ## Getting Started
 
 1. Clone the repository
-2. Start the backend server:
+2. Add your GitHub and OpenAI API keys
+3. Start the agent server:
    ```bash
-   cd backend
+   cd agent
    npm install
    npm start
    ```
-3. Open `frontend/public/index.html` in your browser
-4. Enter a GitHub repository URL and click "Analyze"
+3. Start the frontend server:
+   ```bash
+   cd frontend
+   npm install
+   npm start
+   ```
+5. Enter a GitHub repository URL and click "Analyze"
 
 ## API Endpoints
 
