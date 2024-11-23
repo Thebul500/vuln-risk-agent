@@ -6,11 +6,13 @@ A web-based tool that performs security analysis on Nodejs repositories, providi
 
 ## Features
 
-- GitHub repository analysis
-- Automated threat modeling
-- Vulnerability detection and assessment
-- AI-powered contextual risk evaluation
+- Triage of false-positives
+- Threat modeling
 - Interactive dashboard visualization
+
+## Augmented LLM Generation
+
+Augments LLMs with context-specific security metadata and open source intelligence from the GitHub advisories database. 
 
 ## Architecture
 
