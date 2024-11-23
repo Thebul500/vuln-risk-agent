@@ -4,7 +4,7 @@ async function analyzeRepo() {
     const dashboard = document.getElementById('dashboard');
 
     // Add GitHub URL validation regex
-    const githubRegex = /^https:\/\/github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\.git$/;
+    const githubRegex = /^https:\/\/github\.com\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+(?:\.git)?$/;
     
     if (!githubUrl) {
         alert('Please enter a GitHub repository URL');
@@ -83,23 +83,26 @@ function createVulnCard(vuln) {
             <p><strong>Reasoning:</strong> ${vuln.vulnerability.exploitabilityReasoning}</p>
         </div>
 
-        <div class="conditions-section">
-            <h4>Required Conditions</h4>
-            <ul>
-                ${vuln.vulnerability.requiredConditions.map(condition => 
-                    `<li>${condition}</li>`
-                ).join('')}
-            </ul>
-        </div>
+        ${vuln.vulnerability.requiredConditions.length > 0 ? `
+            <div class="conditions-section">
+                <h4>Required Conditions</h4>
+                <ul>
+                    ${vuln.vulnerability.requiredConditions.map(condition => 
+                        `<li>${condition}</li>`
+                    ).join('')}
+                </ul>
+            </div>` : ''}
 
-        <div class="mitigations-section">
-            <h4>Recommended Mitigations</h4>
-            <ul>
-                ${vuln.vulnerability.recommendedMitigations.map(mitigation => 
-                    `<li>${mitigation}</li>`
-                ).join('')}
-            </ul>
-        </div>
+            <div class="mitigations-section">
+                <details class="mitigations-dropdown">
+                    <summary>Recommended Mitigations</summary>
+                    <ul>
+                        ${vuln.vulnerability.recommendedMitigations.map(mitigation => 
+                            `<li>${mitigation}</li>`
+                        ).join('')}
+                    </ul>
+                </details>
+            </div>
     `;
 
     return card;

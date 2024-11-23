@@ -153,6 +153,10 @@ button:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
+.risk-critical {
+    background: linear-gradient(135deg, #9b2c2c, #742020);
+}
+
 .risk-high { 
     background: linear-gradient(135deg, var(--danger-color), #c0392b);
 }
@@ -210,4 +214,32 @@ h2 {
     opacity: 0.8;
     font-weight: 300;
     letter-spacing: 0.02em;
+}
+
+.mitigations-dropdown {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background-color: rgba(26, 30, 36, 0.6); /* slightly lighter than var(--card-bg) */
+    margin: 8px 0;
+}
+
+.mitigations-dropdown summary {
+    padding: 12px;
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.mitigations-dropdown summary:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.mitigations-dropdown[open] {
+    padding-bottom: 12px;
+}
+
+.mitigations-dropdown ul {
+    margin: 8px 12px;
+    padding-left: 20px;
+    color: var(--primary-color);
 }
