@@ -1,6 +1,6 @@
+const { OpenAI } = require('openai');
 const fs = require('fs').promises;
 const path = require('path');
-const { OpenAI } = require('openai');
 
 class ThreatModelingService {
     constructor() {
@@ -159,7 +159,7 @@ class ThreatModelingService {
     // Generate threat model helper
     async generateThreatModel(metadata) {
         const prompt = `
-Your task is to analyze the following project metadata and create a threat model which will serve as context for assessing the risk of vulnerabilities identifies by an npm audit scan.
+Your task is to analyze the following project metadata and create a threat model which will serve as context for assessing the risk of vulnerabilities identified by an npm audit scan.
 The threat model should offer context about the project which will be used by a security engineer to assess the impact of known vulnerabilities in the target project.
 In later stage in this workflow, the npm audit scan will run on the project and it will be enriched with GitHub advisory data.
 Then, the security engineer will assess the vulnerability data in the context of the threat model to determine the vulnerability's exploitability.
@@ -192,12 +192,12 @@ The threat model must include information which will help a security engineer to
 - a summary of the project's purpose and architecture
 - a list of all the project's dependencies (including devDependencies) and their purpose in the project
 - a list of the project's exposed ports
-- a list of the project's security-related files
+- a list of the project's security-related files with relevant data
 - any other information which would help a security engineer to assess the risk of vulnerabilities in the target project;s dependencies`;
 
         try {
             const response = await this.openai.chat.completions.create({
-                model: "o1-mini",
+                model: "gpt-4o-mini",
                 messages: [{
                     "role": "user",
                     "content": prompt

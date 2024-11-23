@@ -87,7 +87,7 @@ Return only the JSON array with no additional text or formatting.`;
         try {
             console.log("Assessing exploitability with OpenAI...");
             const response = await this.openai.chat.completions.create({
-                model: "o1-mini",
+                model: "gpt-4o-mini",
                 messages: [{
                     "role": "user",
                     "content": prompt
