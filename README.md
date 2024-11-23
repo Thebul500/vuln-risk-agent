@@ -1,6 +1,6 @@
-# GitHub Repository Security Analyzer
+# Nodejs Project Security Analyzer
 
-A web-based tool that performs security analysis on GitHub repositories, providing threat modeling and vulnerability assessments with AI-powered risk evaluation.
+A web-based tool that performs security analysis on Nodejs repositories, providing threat modeling and vulnerability assessments with AI-powered risk evaluation.
 
 ![Security Assessment Dashboard](Screenshot.png)
 
