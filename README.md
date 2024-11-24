@@ -1,4 +1,4 @@
-# Nodejs Project Security Analyzer
+# LLM-powered Security Risk Agent
 
 A web-based tool that performs security analysis on Nodejs repositories, providing threat modeling and vulnerability assessments with AI-powered risk evaluation.
 
