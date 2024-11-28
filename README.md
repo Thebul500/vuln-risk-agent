@@ -14,22 +14,6 @@ A web-based tool that performs security analysis on Nodejs repositories, providi
 
 Augments LLMs with context-specific security metadata and open source intelligence from the GitHub advisories database. 
 
-## Architecture
-
-The application follows a client-server architecture:
-
-### Frontend
-- Pure JavaScript web interface
-- Marked.js for Markdown rendering
-- Dynamic vulnerability card generation
-- Risk level visualization
-
-### Backend
-- REST API endpoint (`/analyze`)
-- GitHub repository processing
-- Vulnerability scanning
-- AI-enhanced risk assessment
-
 ## Getting Started
 
 1. Clone the repository
