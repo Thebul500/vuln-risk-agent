@@ -1,6 +1,6 @@
-const fs = require('fs').promises;
-const path = require('path');
-const { OpenAI } = require('openai');
+import fs from 'fs/promises';  // Use import instead of require
+import path from 'path';
+import { OpenAI } from 'openai';
 
 class ReportingService {
     constructor() {
@@ -121,4 +121,5 @@ Return only the JSON array with no additional text or formatting.`;
     }
 }
 
-module.exports = new ReportingService();
+// Named export for ReportingService
+export const reportingService = new ReportingService();

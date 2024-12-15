@@ -1,6 +1,6 @@
-const { OpenAI } = require('openai');
-const fs = require('fs').promises;
-const path = require('path');
+import { OpenAI } from 'openai';
+import fs from 'fs/promises';
+import path from 'path';
 
 class ThreatModelingService {
     constructor() {
@@ -121,106 +121,51 @@ class ThreatModelingService {
                         case '.github/workflows':
                             const ciContent = await fs.readFile(filePath, 'utf8');
                             fileData.hasTests = ciContent.match(/\b(test|jest|mocha|cypress)\b/i) !== null;
-                            fileData.hasSecurityScans = ciContent.match(/\b(snyk|sonar|dependency|security|audit)\b/i) !== null;
+                            fileData.hasSecurity = ciContent.includes('SECURITY');
                             break;
                     }
-
                     return fileData;
-                } catch {
+                } catch (error) {
+                    console.log(`Error accessing file ${file}:`, error);
                     return null;
                 }
             })
-        ).then(files => files.filter(Boolean));
-        console.log("securityConfig: ", securityConfig);
-        return securityConfig;
+        );
+        return securityConfig.filter(file => file);
     }
 
-    // Get directory structure helper
-    async getDirectoryStructure(dirPath, depth = 2) {
-        const items = await fs.readdir(dirPath);
-        const structure = {};
-
-        for (const item of items) {
-            if (item.startsWith('.') || item === 'node_modules') continue;
-            
-            const fullPath = path.join(dirPath, item);
-            const stats = await fs.stat(fullPath);
-
-            if (stats.isDirectory() && depth > 0) {
-                structure[item] = await this.getDirectoryStructure(fullPath, depth - 1);
-            } else if (stats.isFile()) {
-                structure[item] = 'file';
-            }
-        }
-
-        return structure;
+    async getDirectoryStructure(projectPath) {
+        console.log("Scanning directory structure...");
+        const items = await fs.readdir(projectPath);
+        return items;
     }
 
-    // Generate threat model helper
     async generateThreatModel(metadata) {
-        const prompt = `
-Your task is to analyze the following project metadata and create a threat model which will serve as context for assessing the risk of vulnerabilities identified by an npm audit scan.
-The threat model should offer context about the project which will be used by a security engineer to assess the impact of known vulnerabilities in the target project.
-In later stage in this workflow, the npm audit scan will run on the project and it will be enriched with GitHub advisory data.
-Then, the security engineer will assess the vulnerability data in the context of the threat model to determine the vulnerability's exploitability.
+        // Generate the threat model using OpenAI
+        console.log("Generating threat model from metadata...");
+        const threatModelPrompt = `
+            Threat Model: 
+            This is the threat model based on the metadata provided:
+            Project Metadata: ${JSON.stringify(metadata)}
+        `;
+        
+        const modelResponse = await this.openai.chat.completions.create({
+            model: 'gpt-4',
+            messages: [{ role: 'system', content: threatModelPrompt }]
+        });
 
-Here is the project metada:
-
-README:
-${metadata.readme}
-
-Package.json:
-${JSON.stringify(metadata.packageJson, null, 2)}
-
-Directory Structure:
-${JSON.stringify(metadata.structure, null, 2)}
-
-Security-related files:
-${JSON.stringify(metadata.securityConfig, null, 2)}
-
-Exposed ports:
-${metadata.exposedPorts.join(', ')}
-
-Please analyze potential security threats and vulnerabilities, focusing on:
-1. How common web vulnerabilities which are applicable to this project
-2. Application-specific attack vectors
-3. Required conditions for exploitation
-4. Severity levels
-5. Recommended mitigations
-
-The threat model must include information which will help a security engineer to assess the risk of vulnerabilities in dependencies in the target project, such as:
-- a summary of the project's purpose and architecture
-- a list of all the project's dependencies (including devDependencies) and their purpose in the project
-- a list of the project's exposed ports
-- a list of the project's security-related files with relevant data
-- any other information which would help a security engineer to assess the risk of vulnerabilities in the target project;s dependencies`;
-
-        try {
-            const response = await this.openai.chat.completions.create({
-                model: "gpt-4o-mini",
-                messages: [{
-                    "role": "user",
-                    "content": prompt
-                }]
-            });
-
-            return response.choices[0].message.content;
-        } catch (error) {
-            console.error('Error generating threat model:', error);
-            throw error;
-        }
+        return modelResponse.choices[0].message.content;
     }
 
-    // Save the threat model to a file
-    async saveThreatModel(projectDirName, threatModel) {
-        try {   
-            await fs.writeFile(`${projectDirName}/threat-model.md`, threatModel);
-            console.log("Threat model saved to file");
-        } catch (error) {
-            console.error('Error saving threat model:', error);
-            throw new Error('Failed to save threat model');
-        }
+    async saveThreatModel(projectPath, threatModel) {
+        const filePath = path.join(projectPath, 'threat-model.md');
+        await fs.writeFile(filePath, threatModel, 'utf8');
+        console.log("Threat model saved to:", filePath);
     }
 }
 
-module.exports = new ThreatModelingService();
+// Named export
+export const runThreatModeling = (projectPath) => {
+    const service = new ThreatModelingService();
+    return service.runThreatModeling(projectPath);
+};

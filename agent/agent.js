@@ -1,9 +1,16 @@
-require('dotenv').config();
-const express = require('express');
-const { exec } = require('child_process');
-const fs = require('fs');
-const axios = require('axios');
-const fetch = require('node-fetch');
+import dotenv from 'dotenv';
+import express from 'express';
+import { exec } from 'child_process';
+import fs from 'fs/promises';  // Use import instead of require
+import axios from 'axios';
+import fetch from 'node-fetch';
+
+// Import services with named imports
+import { runThreatModeling } from './services/threatModelingService.js';  // Named import
+import { runAudit } from './services/npmAuditService.js';  // Named import
+import { runResearch } from './services/vulnResearchService.js';  // Named import
+import { generateReport } from './services/reportingService.js';  // Named import
+
 const app = express();
 app.use(express.json());
 
@@ -14,12 +21,6 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   next();
 });
-
-// Services
-const threatModelingService = require('./services/threatModelingService');
-const npmAuditService = require('./services/npmAuditService');
-const vulnResearchService = require('./services/vulnResearchService');
-const reportingService = require('./services/reportingService');
 
 // Endpoint to trigger analysis
 app.post('/analyze', async (req, res) => {
@@ -52,14 +53,14 @@ app.post('/analyze', async (req, res) => {
   console.log("Starting threat modeling and NPM audit in parallel...");
   try {
     await Promise.all([
-      threatModelingService.runThreatModeling(projectDirName)
+      runThreatModeling(projectDirName)
         .then(() => console.log("Threat model generated and saved successfully"))
         .catch(error => {
           console.error("Error in threat modeling:", error);
           throw new Error('Threat modeling failed');
         }),
         
-      npmAuditService.runAudit(projectDirName)
+      runAudit(projectDirName)
         .then(() => console.log("Finished npm audit."))
         .catch(error => {
           console.error("Error in NPM audit:", error);
@@ -73,7 +74,7 @@ app.post('/analyze', async (req, res) => {
   // Vulnerability Research
   console.log("Starting vulnerability research...");
   try {
-    await vulnResearchService.runResearch(projectDirName);
+    await runResearch(projectDirName);
     console.log("Finished vulnerability research.");
   } catch (error) {
     console.error("Error in vulnerability research:", error);
@@ -83,7 +84,7 @@ app.post('/analyze', async (req, res) => {
   // Reporting service
   console.log("Starting reporting service...");
   try {
-    await reportingService.generateReport(projectDirName);
+    await generateReport(projectDirName);
     console.log("Finished reporting service.");
   } catch (error) {
     console.error("Error in reporting service:", error);
@@ -92,8 +93,8 @@ app.post('/analyze', async (req, res) => {
 
   // Return both the security assessment report and threat model
   try {
-    const report = await fs.promises.readFile(`${projectDirName}/security-assessment-report.json`, 'utf8').catch(() => '{}');
-    const threatModel = await fs.promises.readFile(`${projectDirName}/threat-model.md`, 'utf8').catch(() => '{}');
+    const report = await fs.readFile(`${projectDirName}/security-assessment-report.json`, 'utf8').catch(() => '{}');
+    const threatModel = await fs.readFile(`${projectDirName}/threat-model.md`, 'utf8').catch(() => '{}');
     
     res.json({
       vulnerabilities: JSON.parse(report),

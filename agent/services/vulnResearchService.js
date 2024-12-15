@@ -1,6 +1,8 @@
-const axios = require('axios');
-const fs = require('fs').promises;
-const { Octokit } = require('@octokit/core');
+// services/vulnResearchService.js
+
+import axios from 'axios';
+import { promises as fs } from 'fs';
+import { Octokit } from '@octokit/core';
 
 class VulnResearchService {
     constructor() {
@@ -16,11 +18,11 @@ class VulnResearchService {
 
             console.log("Extracting high severity vulnerabilities...");
             const highSeverityVulns = await this.extractHighSeverityVulns(auditResults);
-            console.log("highSeverityVulns: ", highSeverityVulns);
+            console.log("High severity vulnerabilities: ", highSeverityVulns);
             
             console.log("Researching vulnerabilities...");
             const researchResults = await this.researchVulnerabilities(highSeverityVulns);
-            console.log("researchResults: ", researchResults);
+            console.log("Research results: ", researchResults);
             
             console.log("Saving research results...");
             await this.saveResearchResults(projectDirName, researchResults);
@@ -28,6 +30,7 @@ class VulnResearchService {
             
             return researchResults;
         } catch (error) {
+            console.error(`Vulnerability research failed: ${error.message}`);
             throw new Error(`Vulnerability research failed: ${error.message}`);
         }
     }
@@ -125,10 +128,10 @@ class VulnResearchService {
             const octokit = new Octokit({ auth: githubToken });
             const response = await octokit.request(`GET /advisories/${ghsaId}`, {
                 headers: {
-                  'X-GitHub-Api-Version': '2022-11-28'
+                    'X-GitHub-Api-Version': '2022-11-28'
                 }
             });
-            console.log("response.data: ", response.data);
+            console.log("GitHub advisory data: ", response.data);
                 
             return {
                 description: response.data.description,
@@ -155,6 +158,7 @@ class VulnResearchService {
         };
     }
 
+    // Save the research results to a file
     async saveResearchResults(projectDirName, researchResults) {
         try {
             await fs.writeFile(
@@ -163,10 +167,11 @@ class VulnResearchService {
             );
             console.log("Research results written to file");
         } catch (error) {
+            console.error('Error saving research results:', error);
             throw new Error('Failed to save research results');
         }
     }
 }
 
-
-module.exports = new VulnResearchService();
+// Exporting an instance of the service
+export default new VulnResearchService();
