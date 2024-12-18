@@ -1,6 +1,9 @@
 # Use Node.js official image as base
 FROM node:20-alpine3.19
 
+# Install required packages
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
 # Set working directory
 WORKDIR /app
 

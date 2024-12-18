@@ -1,125 +1,67 @@
-import fs from 'fs/promises';  // Use import instead of require
+import fs from 'fs/promises';
 import path from 'path';
 import { OpenAI } from 'openai';
 
 class ReportingService {
-    constructor() {
-        this.openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY
-        });
+  constructor() {
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+  }
+
+  async generateReport(projectPath) {
+    try {
+      console.log('Generating security assessment report...');
+
+      // Read threat model and vulnerabilities
+      const threatModelPath = path.join(projectPath, 'threat-model.md');
+      const threatModel = await fs.readFile(threatModelPath, 'utf8').catch(() => 'Threat model not available.');
+
+      const vulnerabilitiesPath = path.join(projectPath, 'npm-audit-report.json');
+      const vulnerabilities = await fs.readFile(vulnerabilitiesPath, 'utf8').catch(() => '{}');
+
+      // Generate report content using OpenAI
+      const reportContent = await this.createReport(threatModel, JSON.parse(vulnerabilities));
+      const reportPath = path.join(projectPath, 'security-assessment-report.json');
+
+      // Save the report to a file
+      await fs.writeFile(reportPath, JSON.stringify(reportContent, null, 2), 'utf8');
+      console.log('Security assessment report saved at:', reportPath);
+
+      return reportPath;
+    } catch (error) {
+      console.error('Error generating security assessment report:', error);
+      throw error;
     }
+  }
 
-    async generateReport(projectDirName) {
-        try {
-            // Load all the data sources
-            console.log("Loading data sources...");
-            const threatModel = await fs.readFile(
-                path.join(projectDirName, 'threat-model.md'), 
-                'utf8'
-            );
-            
-            const vulnResearch = JSON.parse(await fs.readFile(
-                path.join(projectDirName, 'vuln-research-results.json'),
-                'utf8'
-            ));
+  async createReport(threatModel, vulnerabilities) {
+    try {
+      console.log('Creating report with OpenAI...');
+      const reportPrompt = `
+        Generate a security assessment report:
+        - Threat Model:
+        ${threatModel}
 
-            const npmAudit = JSON.parse(await fs.readFile(
-                path.join(projectDirName, 'npm-audit-results.json'),
-                'utf8'
-            ));
+        - Vulnerabilities:
+        ${JSON.stringify(vulnerabilities)}
+      `;
 
-            // Generate exploitability assessment
-            console.log("Assessing exploitability...");
-            const report = await this.assessExploitability(threatModel, vulnResearch, npmAudit);
-            
-            // Save the report
-            console.log("Saving report...");
-            await this.saveReport(projectDirName, report);
-            
-            return report;
-        } catch (error) {
-            console.error('Error generating security report:', error);
-            throw error;
-        }
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'system', content: reportPrompt }]
+      });
+
+      return response.choices[0].message.content;
+    } catch (error) {
+      console.error('Error creating report with OpenAI:', error);
+      throw error;
     }
-
-    async assessExploitability(threatModel, vulnResearch, npmAudit) {
-        // Filter for high/critical severity vulnerabilities
-        const highSeverityVulns = vulnResearch.filter(vuln => 
-            vuln.severity === 'high' || vuln.severity === 'critical'
-        );
-
-        const prompt = `
-You are a security engineer assessing the exploitability of vulnerabilities in the context of a threat model.
-Your task is to analyze each high/critical severity vulnerability and determine if it's exploitable in this specific project context.
-
-Threat Model:
-${threatModel}
-
-For each of the following vulnerabilities, assess:
-1. Is the vulnerability exploitable in this project's context? Why or why not?
-2. What specific conditions would be required for exploitation?
-3. How does the threat model's context influence the risk level?
-4. What specific mitigations would you recommend?
-
-Vulnerabilities to assess:
-${JSON.stringify(highSeverityVulns, null, 2)}
-
-NPM Audit Additional Context:
-${JSON.stringify(npmAudit.vulnerabilities, null, 2)}
-
-Provide your assessment as a JSON array where each item follows this structure:
-[
-    {
-        "packageName": "package-name",
-        "vulnerability": {
-            "summary": "Brief description",
-            "isExploitable": true/false,
-            "exploitabilityReasoning": "Detailed explanation",
-            "requiredConditions": ["condition1", "condition2"],
-            "contextualRiskLevel": "high/medium/low",
-            "recommendedMitigations": ["mitigation1", "mitigation2"]
-        }
-    }
-]
-
-Return only the JSON array with no additional text or formatting.`;
-        try {
-            console.log("Assessing exploitability with OpenAI...");
-            const response = await this.openai.chat.completions.create({
-                model: "gpt-4o-mini",
-                messages: [{
-                    "role": "user",
-                    "content": prompt
-                }]
-            });
-
-            return response.choices[0].message.content;
-        } catch (error) {
-            console.error('Error assessing exploitability:', error);
-            throw error;
-        }
-    }
-
-    async saveReport(projectDirName, report) {
-        try {
-            console.log("Saving report...");
-            let cleanReport = report;
-            if (typeof report === 'string') {
-                // Remove markdown code block markers if present
-                cleanReport = report.replace(/^```json\n|\n```$/g, '');
-            }
-            await fs.writeFile(
-                path.join(projectDirName, 'security-assessment-report.json'),
-                typeof report === 'string' ? cleanReport : JSON.stringify(report, null, 2)
-            );
-            console.log("Security assessment report saved to file");
-        } catch (error) {
-            console.error('Error saving security report:', error);
-            throw new Error('Failed to save security report');
-        }
-    }
+  }
 }
 
-// Named export for ReportingService
-export const reportingService = new ReportingService();
+// Named export
+export const generateReport = (projectPath) => {
+  const service = new ReportingService();
+  return service.generateReport(projectPath);
+};

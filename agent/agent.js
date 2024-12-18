@@ -1,15 +1,13 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import { exec } from 'child_process';
-import fs from 'fs/promises';  // Use import instead of require
-import axios from 'axios';
-import fetch from 'node-fetch';
-
-// Import services with named imports
-import { runThreatModeling } from './services/threatModelingService.js';  // Named import
-import { runAudit } from './services/npmAuditService.js';  // Named import
-import { runResearch } from './services/vulnResearchService.js';  // Named import
+import fs from 'fs/promises';
 import { generateReport } from './services/reportingService.js';  // Named import
+import { runThreatModeling } from './services/threatModelingService.js';// Default import
+import npmAuditService from './services/npmAuditService.js';  // Default import
+import vulnResearchService from './services/vulnResearchService.js';  // Default import
+
+dotenv.config();
 
 const app = express();
 app.use(express.json());
@@ -24,16 +22,17 @@ app.use((req, res, next) => {
 
 // Endpoint to trigger analysis
 app.post('/analyze', async (req, res) => {
-  console.log("Received request to analyze repository");
+  console.log('Received request to analyze repository.');
 
   // Validate GitHub URL
   const repoUrl = req.body.githubUrl;
   const githubUrlPattern = /^https?:\/\/github\.com\/[\w-]+\/[\w.-]+(?:\.git)?$/;
   if (!githubUrlPattern.test(repoUrl)) {
-    return res.status(400).send('Invalid GitHub repository URL. Please provide a valid GitHub repository URL.');
+    return res.status(400).send('Invalid GitHub repository URL. Please provide a valid URL.');
   }
 
-  // Clone the repository using promisified exec
+  // Clone the repository
+  const projectDirName = repoUrl.split('/').pop().replace('.git', '');
   console.log(`Cloning repository ${repoUrl}...`);
   try {
     await new Promise((resolve, reject) => {
@@ -42,79 +41,64 @@ app.post('/analyze', async (req, res) => {
         else resolve();
       });
     });
+    console.log(`Repository cloned to ${projectDirName}.`);
   } catch (error) {
+    console.error('Error cloning repository:', error);
     return res.status(500).send('Repository cloning failed.');
   }
 
-  const projectDirName = repoUrl.split('/').pop().replace('.git', '');
-  console.log("projectDirName: ", projectDirName);  
-
-  // Run threat model and npm audit in parallel
-  console.log("Starting threat modeling and NPM audit in parallel...");
+  // Run threat modeling and npm audit in parallel
+  console.log('Starting threat modeling and NPM audit in parallel...');
   try {
     await Promise.all([
-      runThreatModeling(projectDirName)
-        .then(() => console.log("Threat model generated and saved successfully"))
-        .catch(error => {
-          console.error("Error in threat modeling:", error);
-          throw new Error('Threat modeling failed');
-        }),
-        
-      runAudit(projectDirName)
-        .then(() => console.log("Finished npm audit."))
-        .catch(error => {
-          console.error("Error in NPM audit:", error);
-          throw new Error('NPM audit failed');
-        })
+      threatModelingService.runThreatModeling(projectDirName),
+      npmAuditService.runAudit(projectDirName)
     ]);
+    console.log('Threat modeling and NPM audit completed.');
   } catch (error) {
-    return res.status(500).send(`Parallel execution failed: ${error.message}`);
+    console.error('Error during parallel analysis:', error);
+    return res.status(500).send('Error during analysis.');
   }
-  
+
   // Vulnerability Research
-  console.log("Starting vulnerability research...");
+  console.log('Starting vulnerability research...');
   try {
-    await runResearch(projectDirName);
-    console.log("Finished vulnerability research.");
+    await vulnResearchService.runResearch(projectDirName);
+    console.log('Vulnerability research completed.');
   } catch (error) {
-    console.error("Error in vulnerability research:", error);
-    res.status(500).send('Error in vulnerability research');
+    console.error('Error in vulnerability research:', error);
+    return res.status(500).send('Error in vulnerability research.');
   }
 
-  // Reporting service
-  console.log("Starting reporting service...");
+  // Generate the final report
+  console.log('Generating the final security assessment report...');
   try {
-    await generateReport(projectDirName);
-    console.log("Finished reporting service.");
-  } catch (error) {
-    console.error("Error in reporting service:", error);
-    res.status(500).send('Error in reporting service');
-  }
+    const reportPath = await generateReport(projectDirName);
+    console.log('Security assessment report generated successfully.');
 
-  // Return both the security assessment report and threat model
-  try {
-    const report = await fs.readFile(`${projectDirName}/security-assessment-report.json`, 'utf8').catch(() => '{}');
+    // Read the generated files
+    const report = await fs.readFile(reportPath, 'utf8');
     const threatModel = await fs.readFile(`${projectDirName}/threat-model.md`, 'utf8').catch(() => '{}');
-    
+
+    // Send the response
     res.json({
       vulnerabilities: JSON.parse(report),
       threatModel: threatModel
     });
-    return;
   } catch (error) {
-    console.error("Error reading assessment files:", error);
-    res.status(500).send('Error reading assessment files');
+    console.error('Error generating final report:', error);
+    res.status(500).send('Error generating final report.');
   } finally {
     // Clean up the cloned repository
     try {
-      fs.rmSync(projectDirName, { recursive: true, force: true });
+      await fs.rm(projectDirName, { recursive: true, force: true });
       console.log(`Cleaned up cloned repository: ${projectDirName}`);
     } catch (cleanupError) {
-      console.error("Error cleaning up cloned repository:", cleanupError);
+      console.error('Error cleaning up cloned repository:', cleanupError);
     }
   }
 });
 
 app.listen(4000, () => {
-  console.log('LLM agent running on port 4000');
+  console.log('LLM agent running on port 4000.');
 });
