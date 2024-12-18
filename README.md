@@ -33,6 +33,12 @@ Augments LLMs with context-specific security metadata and open source intelligen
 5. Enter a GitHub repository URL and click "Analyze"
 
 ## API Endpoints
+You will need to create a .env file in services
+add the following lines 
+
+GITHUB_TOKEN = "YOUR_TOKEN"
+OPENAI_API_KEY = "YOUR_TOKEN"
+
 
 ### POST /analyze
 Accepts a GitHub repository URL and returns:

@@ -2,10 +2,10 @@ import dotenv from 'dotenv';
 import express from 'express';
 import { exec } from 'child_process';
 import fs from 'fs/promises';
-import { generateReport } from './services/reportingService.js';  // Named import
-import { runThreatModeling } from './services/threatModelingService.js';// Default import
-import npmAuditService from './services/npmAuditService.js';  // Default import
-import vulnResearchService from './services/vulnResearchService.js';  // Default import
+import { generateReport } from './services/reportingService.js'; // Named import
+import { runThreatModeling } from './services/threatModelingService.js'; // Named import
+import npmAuditService from './services/npmAuditService.js'; // Default import
+import vulnResearchService from './services/vulnResearchService.js'; // Default import
 
 dotenv.config();
 
@@ -51,7 +51,7 @@ app.post('/analyze', async (req, res) => {
   console.log('Starting threat modeling and NPM audit in parallel...');
   try {
     await Promise.all([
-      threatModelingService.runThreatModeling(projectDirName),
+      runThreatModeling(projectDirName), // Correct reference
       npmAuditService.runAudit(projectDirName)
     ]);
     console.log('Threat modeling and NPM audit completed.');
