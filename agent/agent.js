@@ -1,104 +1,280 @@
 import dotenv from 'dotenv';
 import express from 'express';
+import cors from 'cors';
 import { exec } from 'child_process';
 import fs from 'fs/promises';
-import { generateReport } from './services/reportingService.js'; // Named import
-import { runThreatModeling } from './services/threatModelingService.js'; // Named import
-import npmAuditService from './services/npmAuditService.js'; // Default import
-import vulnResearchService from './services/vulnResearchService.js'; // Default import
+import path from 'path';
+import { generateReport } from './services/reportingService.js';
+import { runThreatModeling } from './services/threatModelingService.js';
+import npmAuditService from './services/npmAuditService.js';
+import vulnResearchService from './services/vulnResearchService.js';
+import { rateLimiter, helmetConfig, corsOptions, validateEnvironment } from './config/security.js';
+import { logger, requestLogger, logAnalysis, logSecurityEvent } from './utils/logger.js';
 
 dotenv.config();
 
-const app = express();
-app.use(express.json());
+// Validate environment variables on startup
+try {
+  validateEnvironment();
+  logger.info('Environment validation passed');
+} catch (error) {
+  logger.error('Environment validation failed:', error);
+  process.exit(1);
+}
 
-// Add CORS middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:8080');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  next();
+const app = express();
+
+// Trust proxy if behind reverse proxy
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
+
+// Security middleware
+app.use(helmetConfig);
+app.use(cors(corsOptions));
+app.use(rateLimiter);
+app.use(express.json({ limit: '10mb' }));
+app.use(requestLogger);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '1.0.0'
+  });
 });
 
-// Endpoint to trigger analysis
+// API documentation endpoint
+app.get('/api-docs', (req, res) => {
+  res.json({
+    endpoints: {
+      'POST /analyze': 'Analyze a GitHub repository for vulnerabilities',
+      'GET /health': 'Health check endpoint',
+      'GET /api-docs': 'API documentation'
+    },
+    version: process.env.npm_package_version || '1.0.0'
+  });
+});
+
+// Enhanced analysis endpoint with comprehensive error handling
 app.post('/analyze', async (req, res) => {
-  console.log('Received request to analyze repository.');
+  const startTime = Date.now();
+  let projectDirName = null;
 
-  // Validate GitHub URL
-  const repoUrl = req.body.githubUrl;
-  const githubUrlPattern = /^https?:\/\/github\.com\/[\w-]+\/[\w.-]+(?:\.git)?$/;
-  if (!githubUrlPattern.test(repoUrl)) {
-    return res.status(400).send('Invalid GitHub repository URL. Please provide a valid URL.');
-  }
-
-  // Clone the repository
-  const projectDirName = repoUrl.split('/').pop().replace('.git', '');
-  console.log(`Cloning repository ${repoUrl}...`);
   try {
+    logger.info('Analysis request received', { ip: req.ip, userAgent: req.get('User-Agent') });
+
+    // Enhanced input validation
+    const { githubUrl, options = {} } = req.body;
+
+    if (!githubUrl) {
+      logSecurityEvent('invalid_input', { reason: 'missing_github_url', ip: req.ip });
+      return res.status(400).json({
+        error: 'GitHub repository URL is required',
+        code: 'MISSING_URL'
+      });
+    }
+
+    const githubUrlPattern = /^https?:\/\/github\.com\/[\w.-]+\/[\w.-]+(?:\.git)?\/?$/;
+    if (!githubUrlPattern.test(githubUrl)) {
+      logSecurityEvent('invalid_input', { reason: 'invalid_github_url', url: githubUrl, ip: req.ip });
+      return res.status(400).json({
+        error: 'Invalid GitHub repository URL format',
+        code: 'INVALID_URL_FORMAT',
+        expected: 'https://github.com/owner/repository'
+      });
+    }
+
+    logAnalysis('analysis_started', githubUrl, { options });
+
+    // Enhanced repository cloning with timeout and validation
+    projectDirName = githubUrl.split('/').pop().replace('.git', '').replace('/', '');
+    const workspacePath = path.join(process.cwd(), 'analysis-workspace');
+
+    // Ensure workspace directory exists
+    await fs.mkdir(workspacePath, { recursive: true });
+
+    const cloneTimeout = parseInt(process.env.CLONE_TIMEOUT_MS) || 60000;
+
+    logger.info(`Cloning repository: ${githubUrl}`);
+
     await new Promise((resolve, reject) => {
-      exec(`git clone ${repoUrl}`, (error) => {
-        if (error) reject(error);
-        else resolve();
+      const cloneProcess = exec(
+        `cd ${workspacePath} && git clone --depth 1 ${githubUrl} ${projectDirName}`,
+        { timeout: cloneTimeout },
+        (error, stdout, stderr) => {
+          if (error) {
+            logger.error('Repository cloning failed', { error: error.message, stderr });
+            reject(new Error(`Failed to clone repository: ${error.message}`));
+          } else {
+            logger.info(`Repository cloned successfully: ${projectDirName}`);
+            resolve(stdout);
+          }
+        }
+      );
+
+      cloneProcess.on('timeout', () => {
+        reject(new Error('Repository cloning timed out'));
       });
     });
-    console.log(`Repository cloned to ${projectDirName}.`);
-  } catch (error) {
-    console.error('Error cloning repository:', error);
-    return res.status(500).send('Repository cloning failed.');
-  }
 
-  // Run threat modeling and npm audit in parallel
-  console.log('Starting threat modeling and NPM audit in parallel...');
-  try {
-    await Promise.all([
-      runThreatModeling(projectDirName), // Correct reference
-      npmAuditService.runAudit(projectDirName)
-    ]);
-    console.log('Threat modeling and NPM audit completed.');
-  } catch (error) {
-    console.error('Error during parallel analysis:', error);
-    return res.status(500).send('Error during analysis.');
-  }
-
-  // Vulnerability Research
-  console.log('Starting vulnerability research...');
-  try {
-    await vulnResearchService.runResearch(projectDirName);
-    console.log('Vulnerability research completed.');
-  } catch (error) {
-    console.error('Error in vulnerability research:', error);
-    return res.status(500).send('Error in vulnerability research.');
-  }
-
-  // Generate the final report
-  console.log('Generating the final security assessment report...');
-  try {
-    const reportPath = await generateReport(projectDirName);
-    console.log('Security assessment report generated successfully.');
-
-    // Read the generated files
-    const report = await fs.readFile(reportPath, 'utf8');
-    const threatModel = await fs.readFile(`${projectDirName}/threat-model.md`, 'utf8').catch(() => '{}');
-
-    // Send the response
-    res.json({
-      vulnerabilities: JSON.parse(report),
-      threatModel: threatModel
-    });
-  } catch (error) {
-    console.error('Error generating final report:', error);
-    res.status(500).send('Error generating final report.');
-  } finally {
-    // Clean up the cloned repository
+    // Validate that package.json exists (Node.js project)
+    const packageJsonPath = path.join(workspacePath, projectDirName, 'package.json');
     try {
-      await fs.rm(projectDirName, { recursive: true, force: true });
-      console.log(`Cleaned up cloned repository: ${projectDirName}`);
-    } catch (cleanupError) {
-      console.error('Error cleaning up cloned repository:', cleanupError);
+      await fs.access(packageJsonPath);
+    } catch {
+      throw new Error('This does not appear to be a Node.js project (no package.json found)');
+    }
+
+    // Enhanced parallel analysis with timeout
+    logger.info('Starting comprehensive security analysis');
+
+    const analysisTimeout = parseInt(process.env.ANALYSIS_TIMEOUT_MS) || 300000; // 5 minutes
+    const projectPath = path.join(workspacePath, projectDirName);
+
+    const analysisPromise = Promise.all([
+      runThreatModeling(projectPath),
+      npmAuditService.runAudit(projectPath)
+    ]);
+
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Analysis timeout')), analysisTimeout);
+    });
+
+    await Promise.race([analysisPromise, timeoutPromise]);
+    logger.info('Threat modeling and NPM audit completed');
+
+    // Enhanced vulnerability research
+    logger.info('Starting vulnerability research');
+    await vulnResearchService.runResearch(projectPath);
+    logger.info('Vulnerability research completed');
+
+    // Generate comprehensive security report
+    logger.info('Generating final security assessment report');
+    const reportPath = await generateReport(projectPath);
+
+    // Read generated analysis files
+    const [reportContent, threatModelContent] = await Promise.allSettled([
+      fs.readFile(reportPath, 'utf8'),
+      fs.readFile(path.join(projectPath, 'threat-model.md'), 'utf8')
+    ]);
+
+    const report = reportContent.status === 'fulfilled' ? JSON.parse(reportContent.value) : {};
+    const threatModel = threatModelContent.status === 'fulfilled' ? threatModelContent.value : 'Threat model generation failed';
+
+    const analysisTime = Date.now() - startTime;
+
+    logAnalysis('analysis_completed', githubUrl, {
+      analysisTime: `${analysisTime}ms`,
+      vulnerabilityCount: Array.isArray(report.vulnerabilities) ? report.vulnerabilities.length : 0
+    });
+
+    // Send comprehensive response
+    res.json({
+      success: true,
+      repository: githubUrl,
+      analysisTime: `${analysisTime}ms`,
+      timestamp: new Date().toISOString(),
+      vulnerabilities: report,
+      threatModel: threatModel,
+      metadata: {
+        analysisVersion: process.env.npm_package_version || '1.0.0',
+        toolsUsed: ['npm-audit', 'github-advisories', 'threat-modeling', 'openai-analysis']
+      }
+    });
+
+  } catch (error) {
+    const analysisTime = Date.now() - startTime;
+    logger.error('Analysis failed', {
+      error: error.message,
+      stack: error.stack,
+      repository: req.body.githubUrl,
+      analysisTime: `${analysisTime}ms`
+    });
+
+    logAnalysis('analysis_failed', req.body.githubUrl, {
+      error: error.message,
+      analysisTime: `${analysisTime}ms`
+    });
+
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: 'ANALYSIS_FAILED',
+      analysisTime: `${analysisTime}ms`,
+      timestamp: new Date().toISOString()
+    });
+
+  } finally {
+    // Enhanced cleanup with error handling
+    if (projectDirName) {
+      try {
+        const workspacePath = path.join(process.cwd(), 'analysis-workspace');
+        const projectPath = path.join(workspacePath, projectDirName);
+        await fs.rm(projectPath, { recursive: true, force: true });
+        logger.info(`Cleaned up analysis workspace: ${projectDirName}`);
+      } catch (cleanupError) {
+        logger.error('Cleanup failed', { error: cleanupError.message, projectDirName });
+      }
     }
   }
 });
 
-app.listen(4000, () => {
-  console.log('LLM agent running on port 4000.');
+// Global error handler
+app.use((error, req, res, next) => {
+  logger.error('Unhandled error', {
+    error: error.message,
+    stack: error.stack,
+    url: req.url,
+    method: req.method
+  });
+
+  res.status(500).json({
+    success: false,
+    error: 'Internal server error',
+    code: 'INTERNAL_ERROR',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Handle 404s
+app.use((req, res) => {
+  logSecurityEvent('endpoint_not_found', { url: req.url, method: req.method, ip: req.ip });
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found',
+    code: 'NOT_FOUND',
+    availableEndpoints: ['/analyze', '/health', '/api-docs']
+  });
+});
+
+const PORT = process.env.PORT || 4000;
+
+app.listen(PORT, () => {
+  logger.info(`Vuln Risk Agent server started`, {
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    version: process.env.npm_package_version || '1.0.0'
+  });
+});
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection', { reason, promise });
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception', { error: error.message, stack: error.stack });
+  process.exit(1);
 });

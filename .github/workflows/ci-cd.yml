@@ -1,0 +1,275 @@
+name: 🛡️ Vuln Risk Agent CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 6 * * 1' # Weekly dependency check
+
+jobs:
+  security-scan:
+    name: 🔍 Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          cd agent && npm ci
+          cd ../frontend && npm ci
+
+      - name: Security audit
+        run: |
+          cd agent && npm audit --audit-level=moderate
+          cd ../frontend && npm audit --audit-level=moderate
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --all-projects --severity-threshold=high
+
+      - name: CodeQL Analysis
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+  test:
+    name: 🧪 Testing
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          cd agent && npm ci
+          cd ../frontend && npm ci
+
+      - name: Run linting
+        run: |
+          cd agent && npm run lint
+          cd ../frontend && npm run lint
+
+      - name: Run tests with coverage
+        run: |
+          cd agent && npm run test:coverage
+          cd ../frontend && npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./agent/coverage/lcov.info
+          flags: agent
+          name: agent-coverage
+
+      - name: Upload frontend coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+
+  docker-security:
+    name: 🐳 Docker Security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: |
+          docker build -t vuln-risk-agent:latest .
+          docker build -t vuln-risk-frontend:latest ./frontend
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'vuln-risk-agent:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Docker Scout security scan
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: vuln-risk-agent:latest
+          only-severities: critical,high
+          exit-code: true
+
+  build-and-deploy:
+    name: 🚀 Build & Deploy
+    runs-on: ubuntu-latest
+    needs: [security-scan, test, docker-security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          cd agent && npm ci --production
+          cd ../frontend && npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend && npm run build
+
+      - name: Build and push Docker images
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+
+          # Build with version tags
+          VERSION=$(date +%Y.%m.%d)-${GITHUB_SHA:0:8}
+
+          docker build -t $DOCKER_USERNAME/vuln-risk-agent:latest .
+          docker build -t $DOCKER_USERNAME/vuln-risk-agent:$VERSION .
+
+          docker build -t $DOCKER_USERNAME/vuln-risk-frontend:latest ./frontend
+          docker build -t $DOCKER_USERNAME/vuln-risk-frontend:$VERSION ./frontend
+
+          # Push images
+          docker push $DOCKER_USERNAME/vuln-risk-agent:latest
+          docker push $DOCKER_USERNAME/vuln-risk-agent:$VERSION
+          docker push $DOCKER_USERNAME/vuln-risk-frontend:latest
+          docker push $DOCKER_USERNAME/vuln-risk-frontend:$VERSION
+
+      - name: Deploy to staging
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "🚀 Deploying to staging environment"
+          # Add your deployment script here
+
+      - name: Run integration tests
+        run: |
+          echo "🧪 Running integration tests against staging"
+          # Add integration test commands here
+
+      - name: Notify deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: always()
+
+  performance-test:
+    name: ⚡ Performance Testing
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Start services
+        run: |
+          docker-compose up -d
+          sleep 30 # Wait for services to start
+
+      - name: Run load tests
+        run: |
+          npx artillery run performance/load-test.yml
+
+      - name: Run lighthouse CI
+        uses: treosh/lighthouse-ci-action@v9
+        with:
+          urls: |
+            http://localhost:8080
+          uploadArtifacts: true
+
+  dependency-update:
+    name: 📦 Dependency Updates
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Update dependencies
+        run: |
+          cd agent && npx npm-check-updates -u
+          cd ../frontend && npx npm-check-updates -u
+
+      - name: Install updated dependencies
+        run: |
+          cd agent && npm install
+          cd ../frontend && npm install
+
+      - name: Run tests with updated deps
+        run: |
+          cd agent && npm test
+          cd ../frontend && npm test
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: '📦 Update dependencies'
+          title: '📦 Automated dependency updates'
+          body: |
+            🤖 **Automated dependency updates**
+
+            This PR updates dependencies to their latest versions.
+
+            **Changes:**
+            - Updated Node.js dependencies
+            - Security patches applied
+            - All tests passing
+
+            **Review checklist:**
+            - [ ] Security audit passed
+            - [ ] All tests passing
+            - [ ] No breaking changes detected
+          branch: automated-dependency-updates

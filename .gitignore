@@ -1,2 +1,89 @@
+# Dependencies
 node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+agent/.env
+frontend/.env
+
+# Logs
+logs/
+*.log
+agent/logs/
+frontend/logs/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output/
+
+# Build outputs
+dist/
+build/
+agent/dist/
+frontend/dist/
+frontend/build/
+
+# Temporary directories
+tmp/
+temp/
+.tmp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test outputs
+test-results/
+junit.xml
+
+# Docker
+.dockerignore
+
+# Cache
+.cache/
+agent/.cache/
+frontend/.cache/
+
+# Repository analysis workspace
+analysis-workspace/
+cloned-repos/
+
+# Security scan results
+security-reports/
+vulnerability-cache/
+
+# Backup files
+*.bak
+*.backup
+
+# NPM package files
+*.tgz
+
+# ESLint cache
+.eslintcache
