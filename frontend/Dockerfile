@@ -20,4 +20,5 @@ COPY . .
 EXPOSE 8080
 
 # Start the application
+USER non-root
 CMD ["node", "index.js"]
